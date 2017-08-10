@@ -5,7 +5,8 @@ import ReactModal from 'react-modal';
 import ReactLoading from 'react-loading';
 import { connect } from 'react-redux';
 // Custom dependencies
-import FoodList from './FoodList'
+import FoodList from './FoodList';
+import ShoppingList from './ShoppingList';
 import { addRecipe, removeFromCalendar } from '../actions';
 import { capitalize } from '../utils/helper';
 import { fetchRecipes } from '../utils/api';
@@ -19,12 +20,15 @@ class App extends Component {
       loadingFood: false,
       meal: null,
       day: null,
-      food: null
+      food: null,
+      ingredientsModalOpen: false
     };
 
     this.openFoodModal = this.openFoodModal.bind(this);
     this.closeFoodModal = this.closeFoodModal.bind(this);
     this.searchFood = this.searchFood.bind(this);
+    this.openIngredientsModal = this.openIngredientsModal.bind(this);
+    this.closeIngredientsModal = this.closeIngredientsModal.bind(this);
   }
 
   // open modal
@@ -46,6 +50,37 @@ class App extends Component {
     });
   }
 
+  // open ingredients modal
+  openIngredientsModal() {
+    this.setState({
+      ingredientsModalOpen: true
+    });
+  }
+
+  // close ingredients modal
+  closeIngredientsModal() {
+    this.setState({
+      ingredientsModalOpen: false
+    });
+  }
+
+  // generate ingredient shopping list
+  generateShoppingList() {
+    return this.props.calendar.reduce( (meals,day) => {
+      const { breakfast, lunch, dinner } = day.meals;
+
+      // add meals (breakfast, lunch, dinner) to the meals array if not null
+      breakfast && meals.push(breakfast);
+      lunch && meals.push(lunch);
+      dinner && meals.push(dinner);
+
+      return meals;
+    }, [])
+      .reduce( (ingredients, meal) => {
+        return ingredients.concat(meal.ingredientLines);
+      }, []);
+  }
+
   searchFood(e) {
     if(!this.input.value) {
       return;
@@ -64,12 +99,21 @@ class App extends Component {
   }
 
   render() {
-    const { foodModalOpen, loadingFood, food } = this.state;
+    const { foodModalOpen, loadingFood, food, ingredientsModalOpen } = this.state;
     const { calendar, remove, selectRecipe } = this.props;
     const mealOrder = ['breakfast', 'lunch', 'dinner'];
 
     return (
       <div className='container'>
+        <div className='nav'>
+          <h1 className="header">Meals</h1>
+          <button
+            className="shopping-list"
+            onClick={this.openIngredientsModal}
+          >
+            Shopping List
+          </button>
+        </div>
         <ul className='meal-types'>
           {mealOrder.map((mealType) => (
             <li key={mealType} className='subheader'>
@@ -113,7 +157,7 @@ class App extends Component {
           overlayClassName='overlay'
           isOpen={foodModalOpen}
           onRequestClose={this.closeFoodModal}
-          contentLabel="Modal"
+          contentLabel="add recipe modal"
         >
           {
             loadingFood
@@ -152,6 +196,16 @@ class App extends Component {
           }
 
           <p><button onClick={this.closeFoodModal}>Close</button></p>
+        </ReactModal>
+
+        <ReactModal
+          isOpen={ingredientsModalOpen}
+          onRequestClose={this.closeIngredientsModal}
+          className='modal'
+          overlayClassName='overlay'
+          contentLabel='ingredient modal'
+        >
+          {ingredientsModalOpen && <ShoppingList list={this.generateShoppingList()}/>}
         </ReactModal>
       </div>
     );
